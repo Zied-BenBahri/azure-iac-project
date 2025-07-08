@@ -34,6 +34,10 @@ This project provisions a basic Azure infrastructure using Terraform. It include
   - Two IIS VMs (Windows)
 - **Public IP**: For proxy VM
 
+## Architecture Diagram
+
+![Azure Infrastructure Architecture](docs/rg-internship.png)
+
 ## Prerequisites
 
 - [Terraform](https://www.terraform.io/downloads.html) >= 1.0
