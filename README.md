@@ -70,12 +70,12 @@ This project provisions a basic Azure infrastructure using Terraform. It include
 5. **Apply the configuration**
 
    ```sh
-   terraform apply
+   terraform apply -var-file="terraform.tfvars"
    ```
 
 6. **Destroy the resources (when done)**
    ```sh
-   terraform destroy
+   terraform destroy -var-file="terraform.tfvars"
    ```
 
 ## Security
