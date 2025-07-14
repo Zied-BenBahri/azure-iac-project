@@ -78,6 +78,7 @@ resource "azurerm_network_interface" "iis01_nic" {
     name                          = "ipconfig1"
     subnet_id                     = azurerm_subnet.backend.id
     private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.iis01_ip.id
   }
 }
 
@@ -91,6 +92,7 @@ resource "azurerm_network_interface" "iis02_nic" {
     name                          = "ipconfig1"
     subnet_id                     = azurerm_subnet.backend.id
     private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.iis02_ip.id
   }
 }
 # VM: vm-iis-01
