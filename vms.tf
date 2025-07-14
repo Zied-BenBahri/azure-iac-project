@@ -32,6 +32,7 @@ resource "azurerm_windows_virtual_machine" "proxy_vm" {
     sku       = "2022-Datacenter"
     version   = "latest"
   }
+  custom_data = base64encode(file("${path.module}/scripts/enable-winrm.ps1"))
 }
 # Monitoring NIC
 resource "azurerm_network_interface" "monitor_nic" {
@@ -116,6 +117,7 @@ resource "azurerm_windows_virtual_machine" "vm_iis_01" {
     sku       = "2022-Datacenter"
     version   = "latest"
   }
+  custom_data = base64encode(file("${path.module}/scripts/enable-winrm.ps1"))
 }
 
 # VM: vm-iis-02
@@ -139,4 +141,5 @@ resource "azurerm_windows_virtual_machine" "vm_iis_02" {
     sku       = "2022-Datacenter"
     version   = "latest"
   }
+  custom_data = base64encode(file("${path.module}/scripts/enable-winrm.ps1"))
 }
