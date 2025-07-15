@@ -28,7 +28,7 @@ resource "azurerm_virtual_machine_extension" "iis02_setup" {
 }
 resource "azurerm_virtual_machine_extension" "proxy_setup" {
   name                 = "proxy-setup"
-  virtual_machine_id   = azurerm_windows_virtual_machine.vm_proxy.id
+  virtual_machine_id   = azurerm_windows_virtual_machine.proxy_vm.id
   publisher            = "Microsoft.Compute"
   type                 = "CustomScriptExtension"
   type_handler_version = "1.10"
