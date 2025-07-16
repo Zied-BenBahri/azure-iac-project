@@ -1,39 +1,3 @@
-# Proxy NIC
-/*
-resource "azurerm_network_interface" "proxy_nic" {
-  name                = "nic-proxy"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
-
-  ip_configuration {
-    name                          = "ipconfig1"
-    subnet_id                     = azurerm_subnet.frontend.id
-    private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.proxy_ip.id
-  }
-}
-
-resource "azurerm_windows_virtual_machine" "proxy_vm" {
-  name                  = "vm-proxy"
-  location              = var.location
-  resource_group_name   = azurerm_resource_group.main.name
-  size                  = "Standard_A1_v2"
-  admin_username        = var.admin_username
-  admin_password        = var.admin_password
-  network_interface_ids = [azurerm_network_interface.proxy_nic.id]
-
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
-  }
-
-  source_image_reference {
-    publisher = "MicrosoftWindowsServer"
-    offer     = "WindowsServer"
-    sku       = "2022-Datacenter"
-    version   = "latest"
-  }
-}*/
 # Monitoring NIC
 resource "azurerm_network_interface" "monitor_nic" {
   name                = "nic-monitor"
@@ -44,7 +8,7 @@ resource "azurerm_network_interface" "monitor_nic" {
     name                          = "ipconfig1"
     subnet_id                     = azurerm_subnet.monitoring.id
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.proxy_ip.id
+    public_ip_address_id          = azurerm_public_ip.monitor_ip.id
   }
 }
 
@@ -80,7 +44,7 @@ resource "azurerm_network_interface" "iis01_nic" {
     name                          = "ipconfig1"
     subnet_id                     = azurerm_subnet.backend.id
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.iis01_ip.id
+    #public_ip_address_id          = azurerm_public_ip.iis01_ip.id
   }
 }
 

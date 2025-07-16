@@ -1,4 +1,5 @@
 # Frontend NSG – allow HTTP + RDP (proxy server)
+/*
 resource "azurerm_network_security_group" "frontend_nsg" {
   name                = "nsg-frontend"
   location            = var.location
@@ -39,7 +40,7 @@ resource "azurerm_network_security_group" "frontend_nsg" {
     destination_address_prefix = "*"
   }
 }
-
+*/
 # Backend NSG – allow HTTP (used by proxy)
 resource "azurerm_network_security_group" "backend_nsg" {
   name                = "nsg-backend"

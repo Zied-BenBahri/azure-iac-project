@@ -15,7 +15,7 @@ output "vnet_name" {
 output "vnet_address_space" {
   value = azurerm_virtual_network.main.address_space
 }
-
+/*
 # Subnets
 output "frontend_subnet" {
   value = {
@@ -23,7 +23,7 @@ output "frontend_subnet" {
     prefix = azurerm_subnet.frontend.address_prefixes
   }
 }
-
+*/
 output "backend_subnet" {
   value = {
     name   = azurerm_subnet.backend.name
@@ -83,5 +83,14 @@ output "vm-iis-02" {
     size       = azurerm_windows_virtual_machine.vm_iis_02.size
     ip_address = azurerm_public_ip.iis02_ip.ip_address
     private_ip = azurerm_network_interface.iis02_nic.private_ip_address
+  }
+}
+output "web-load-balancer" {
+  value = {
+    name               = azurerm_lb.web_lb.name
+    frontend_ip_config = azurerm_lb.web_lb.frontend_ip_configuration[0].name
+    backend_pool       = azurerm_lb_backend_address_pool.web_backend_pool.name
+    probe              = azurerm_lb_probe.web_probe.name
+    rule               = azurerm_lb_rule.web_lb_rule.name
   }
 }
