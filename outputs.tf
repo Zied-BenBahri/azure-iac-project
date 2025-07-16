@@ -44,7 +44,7 @@ output "gateway_subnet" {
     prefix = azurerm_subnet.gateway.address_prefixes
   }
 }
-
+/*
 # Virtual Machines
 output "proxy_vm" {
   value = {
@@ -54,13 +54,14 @@ output "proxy_vm" {
     ip_address = azurerm_public_ip.proxy_ip.ip_address
     private_ip = azurerm_network_interface.proxy_nic.private_ip_address
   }
-}
+}*/
 
 output "monitor_vm" {
   value = {
     name       = azurerm_linux_virtual_machine.monitor_vm.name
     location   = azurerm_linux_virtual_machine.monitor_vm.location
     size       = azurerm_linux_virtual_machine.monitor_vm.size
+    ip_address = azurerm_public_ip.proxy_ip.ip_address
     private_ip = azurerm_network_interface.monitor_nic.private_ip_address
   }
 }
