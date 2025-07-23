@@ -3,8 +3,8 @@ resource "azurerm_public_ip" "vpn_gateway_ip" {
   name                = "vpn-gateway-ip"
   location            = var.location
   resource_group_name = azurerm_resource_group.main.name
-  allocation_method   = "Dynamic"
-  sku                 = "Basic"
+  allocation_method   = "Static"
+  sku                 = "Standard"
 }
 
 resource "azurerm_virtual_network_gateway" "vpn_gateway" {
