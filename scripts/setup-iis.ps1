@@ -24,4 +24,10 @@ Start-Process msiexec.exe -Wait -ArgumentList '/I C:\windows_exporter.msi /quiet
 Start-Service windows_exporter
 Set-Service windows_exporter -StartupType Automatic
 
+# Enable and configure WinRM
+#Write-Host "Configuring WinRM..."
+#winrm quickconfig -force
+#winrm set winrm/config/service/auth '@{Basic="true"}'
+#winrm set winrm/config/service '@{AllowUnencrypted="true"}'
+
 Write-Host "✅ IIS, HTML homepage, and WMI Exporter setup complete."
