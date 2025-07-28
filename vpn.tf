@@ -22,4 +22,8 @@ resource "azurerm_virtual_network_gateway" "vpn_gateway" {
     private_ip_address_allocation = "Dynamic"
     subnet_id                     = azurerm_subnet.gateway.id
   }
+  timeouts {
+    create = "60m"
+    delete = "60m"
+  }
 }
