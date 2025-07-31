@@ -18,5 +18,8 @@ if (-not (Test-Path "IIS:\Sites\BlazorApp")) {
 else {
     Restart-WebAppPool -Name "BlazorApp"
 }
-
+# Configure the site to use the Blazor app
+    
+Stop-Website -Name "Default Web Site"
+Start-Website -Name "BlazorApp"
 Write-Host "✅ Blazor app installed and IIS site configured."
