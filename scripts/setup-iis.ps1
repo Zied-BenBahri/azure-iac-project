@@ -25,6 +25,22 @@ function Write-Log {
     $logMessage | Out-File -FilePath "C:\inetpub\wwwroot\deployment.log" -Append -Encoding utf8 -ErrorAction SilentlyContinue
 }
 
+# Function to clean parameter strings (remove extra quotes)
+function Clean-Parameter {
+    param([string]$Value)
+    
+    if ([string]::IsNullOrEmpty($Value)) {
+        return ""
+    }
+    
+    # Remove surrounding single quotes
+    $cleanValue = $Value.Trim("'")
+    # Remove surrounding double quotes
+    $cleanValue = $cleanValue.Trim('"')
+    
+    return $cleanValue
+}
+
 # Function to download with multiple methods
 function Download-FileAdvanced {
     param(
@@ -94,13 +110,13 @@ function Create-IISAppPool {
         $appcmd = "$env:SystemRoot\System32\inetsrv\appcmd.exe"
         
         # Delete existing pool if it exists
-        & $appcmd delete apppool $PoolName 2>$null
+        & $appcmd delete apppool "$PoolName" 2>$null
         Start-Sleep -Seconds 2
         
-        # Create new application pool
-        & $appcmd add apppool /name:$PoolName
-        & $appcmd set apppool $PoolName /managedRuntimeVersion:""
-        & $appcmd set apppool $PoolName /processModel.identityType:ApplicationPoolIdentity
+        # Create new application pool (use quotes for pool name)
+        & $appcmd add apppool /name:"$PoolName"
+        & $appcmd set apppool "$PoolName" /managedRuntimeVersion:""
+        & $appcmd set apppool "$PoolName" /processModel.identityType:ApplicationPoolIdentity
         
         Write-Log "Application pool created successfully: $PoolName" "SUCCESS" "Green"
         return $true
@@ -129,9 +145,9 @@ function Create-IISApplication {
         & $appcmd delete app "$SiteName/$AppName" 2>$null
         Start-Sleep -Seconds 2
         
-        # Create new application
+        # Create new application (use proper quoting)
         & $appcmd add app /site.name:"$SiteName" /path:"/$AppName" /physicalPath:"$PhysicalPath"
-        & $appcmd set app "$SiteName/$AppName" /applicationPool:$PoolName
+        & $appcmd set app "$SiteName/$AppName" /applicationPool:"$PoolName"
         
         Write-Log "IIS application created successfully: $AppName" "SUCCESS" "Green"
         return $true
@@ -146,6 +162,11 @@ function Create-IISApplication {
 $ErrorActionPreference = "Continue"
 
 try {
+    # Clean all input parameters to remove extra quotes
+    $AppName = Clean-Parameter -Value $AppName
+    $ConnectionString = Clean-Parameter -Value $ConnectionString
+    $AppZipUrl = Clean-Parameter -Value $AppZipUrl
+    
     # Create log directories
     $logDir = "C:\temp"
     if (!(Test-Path $logDir)) {
@@ -159,9 +180,16 @@ try {
     
     Write-Log "=== Starting ASP.NET Core Blazor Server Deployment ===" "INFO" "Green"
     Write-Log "Server: $env:COMPUTERNAME" "INFO" "Cyan"
-    Write-Log "Script Parameters: AppName=$AppName" "INFO" "Cyan"
-    Write-Log "ConnectionString provided: $($ConnectionString -ne '')" "INFO" "Cyan"
-    Write-Log "AppZipUrl: $AppZipUrl" "INFO" "Cyan"
+    Write-Log "Script Parameters (cleaned):" "INFO" "Cyan"
+    Write-Log "  - AppName: '$AppName'" "INFO" "Cyan"
+    Write-Log "  - ConnectionString provided: $($ConnectionString -ne '')" "INFO" "Cyan"
+    Write-Log "  - AppZipUrl: '$AppZipUrl'" "INFO" "Cyan"
+    
+    # Validate parameters
+    if ([string]::IsNullOrWhiteSpace($AppName)) {
+        $AppName = "BlazorApp"
+        Write-Log "AppName was empty, using default: $AppName" "WARNING" "Yellow"
+    }
     
     # Test basic network connectivity
     Write-Log "Testing network connectivity..." "INFO" "Yellow"
@@ -187,7 +215,7 @@ try {
         "IIS-HealthAndDiagnostics", "IIS-HttpTracing", "IIS-Security",
         "IIS-RequestFiltering", "IIS-Performance", "IIS-WebServerManagementTools",
         "IIS-ManagementConsole", "IIS-IIS6ManagementCompatibility", "IIS-Metabase",
-        "IIS-ASPNET45"  # Added for ASP.NET support
+        "IIS-ASPNET45"
     )
     
     try {
@@ -248,13 +276,14 @@ try {
         Write-Log "IIS restart warning: $($_.Exception.Message)" "WARNING" "Yellow"
     }
     
-    # Create application directory (fix path issue)
-    $appPath = "C:\inetpub\wwwroot\$AppName"  # Remove extra quotes
+    # Create application directory (fixed path construction)
+    $appPath = "C:\inetpub\wwwroot\$AppName"
     Write-Log "Creating application directory: $appPath" "INFO" "Yellow"
     if (Test-Path $appPath) {
         Remove-Item $appPath -Recurse -Force
     }
     New-Item -ItemType Directory -Path $appPath -Force
+    Write-Log "Application directory created successfully" "SUCCESS" "Green"
     
     # Download Blazor application
     if ($AppZipUrl -ne "") {
@@ -279,10 +308,34 @@ try {
             New-Item -ItemType Directory -Path "$appPath\wwwroot" -Force
         }
     }
+    else {
+        Write-Log "No AppZipUrl provided. Creating basic structure." "INFO" "Yellow"
+        New-Item -ItemType Directory -Path "$appPath\wwwroot" -Force
+        
+        # Create a simple index.html for testing
+        $indexHtml = @"
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blazor App - $env:COMPUTERNAME</title>
+</head>
+<body>
+    <h1>Blazor Application Placeholder</h1>
+    <p>Server: $env:COMPUTERNAME</p>
+    <p>Deployment Time: $(Get-Date)</p>
+    <p>Application Path: $appPath</p>
+</body>
+</html>
+"@
+        $indexHtml | Out-File -FilePath "$appPath\wwwroot\index.html" -Encoding UTF8 -Force
+        Write-Log "Created placeholder index.html" "INFO" "Cyan"
+    }
     
-    # Create appsettings.json
+    # Create appsettings.json (fix connection string handling)
     if ($ConnectionString -ne "") {
         Write-Log "Creating appsettings.json..." "INFO" "Yellow"
+        Write-Log "Connection string length: $($ConnectionString.Length)" "INFO" "Cyan"
+        
         $hostname = $env:COMPUTERNAME
         $appSettings = @{
             "Logging"           = @{
@@ -334,6 +387,13 @@ try {
           <environmentVariable name="ASPNETCORE_ENVIRONMENT" value="Production" />
         </environmentVariables>
       </aspNetCore>
+      <defaultDocument>
+        <files>
+          <clear />
+          <add value="index.html" />
+          <add value="default.html" />
+        </files>
+      </defaultDocument>
     </system.webServer>
   </location>
 </configuration>
@@ -348,7 +408,7 @@ try {
         Write-Log "Failed to create web.config: $($_.Exception.Message)" "ERROR" "Red"
     }
     
-    # Create application pool using native methods
+    # Create application pool using native methods (fixed naming)
     $poolName = "${AppName}Pool"
     if (Create-IISAppPool -PoolName $poolName) {
         # Create IIS application
@@ -356,14 +416,22 @@ try {
         Create-IISApplication -SiteName $siteName -AppName $AppName -PhysicalPath $appPath -PoolName $poolName
     }
     
-    # Test SQL Server connectivity (if connection string provided)
+    # Test SQL Server connectivity (fix connection string parsing)
     if ($ConnectionString -ne "") {
         Write-Log "Testing SQL Server connectivity..." "INFO" "Yellow"
+        Write-Log "Connection string preview: $($ConnectionString.Substring(0, [Math]::Min(50, $ConnectionString.Length)))..." "INFO" "Cyan"
+        
         try {
-            $connectionTest = New-Object System.Data.SqlClient.SqlConnection($ConnectionString)
-            $connectionTest.Open()
-            $connectionTest.Close()
-            Write-Log "SQL Server connection successful" "SUCCESS" "Green"
+            # Test the connection string format first
+            if ($ConnectionString.Contains("Server=") -or $ConnectionString.Contains("Data Source=")) {
+                $connectionTest = New-Object System.Data.SqlClient.SqlConnection($ConnectionString)
+                $connectionTest.Open()
+                $connectionTest.Close()
+                Write-Log "SQL Server connection successful" "SUCCESS" "Green"
+            }
+            else {
+                Write-Log "Connection string format appears invalid - missing Server= or Data Source=" "WARNING" "Yellow"
+            }
         }
         catch {
             Write-Log "SQL Server connection failed: $($_.Exception.Message)" "WARNING" "Yellow"
@@ -371,7 +439,29 @@ try {
         }
     }
     
-    # Final summary
+    # Verify application deployment
+    Write-Log "Verifying application deployment..." "INFO" "Yellow"
+    try {
+        $appFiles = Get-ChildItem $appPath -Recurse -File
+        Write-Log "Application files deployed: $($appFiles.Count)" "INFO" "Cyan"
+        
+        # Test local access
+        Start-Sleep -Seconds 5
+        $testUrl = "http://localhost/$AppName"
+        try {
+            $response = Invoke-WebRequest -Uri $testUrl -UseBasicParsing -TimeoutSec 10
+            Write-Log "Application test successful - Status: $($response.StatusCode)" "SUCCESS" "Green"
+        }
+        catch {
+            Write-Log "Application test failed: $($_.Exception.Message)" "WARNING" "Yellow"
+            Write-Log "This may be normal if no actual application files were deployed" "INFO" "Cyan"
+        }
+    }
+    catch {
+        Write-Log "Application verification failed: $($_.Exception.Message)" "WARNING" "Yellow"
+    }
+    
+    # Final summary (fixed formatting)
     Write-Log "=== Deployment Summary ===" "INFO" "Green"
     Write-Log "Server: $env:COMPUTERNAME" "INFO" "White"
     Write-Log "Application Pool: $poolName" "INFO" "White"
