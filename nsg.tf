@@ -4,6 +4,19 @@ resource "azurerm_network_security_group" "backend_nsg" {
   location            = var.location
   resource_group_name = azurerm_resource_group.main.name
 
+  # Allow inbound traffic from the VPN gateway
+  security_rule {
+    name                       = "allow-icmp-from-p2s"
+    priority                   = 101
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Icmp"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "172.16.0.0/24" # your P2S client pool
+    destination_address_prefix = "*"
+  }
+
   # Allow HTTP for web traffic
   security_rule {
     name                       = "allow-http"
