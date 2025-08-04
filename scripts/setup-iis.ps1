@@ -4,15 +4,71 @@ param(
     [string]$AppZipUrl = ""
 )
 
+# Enhanced logging function that writes to multiple locations
+function Write-Log {
+    param(
+        [string]$Message,
+        [string]$Level = "INFO",
+        [string]$Color = "White"
+    )
+    
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logMessage = "[$timestamp] [$Level] $Message"
+    
+    # Write to console (appears in stdout)
+    Write-Host $logMessage -ForegroundColor $Color
+    
+    # Write to custom log file (easier to access)
+    $logMessage | Out-File -FilePath "C:\temp\deployment.log" -Append -Encoding utf8
+    
+    # Write to Windows Event Log
+    try {
+        if (-not [System.Diagnostics.EventLog]::SourceExists("CustomDeployment")) {
+            [System.Diagnostics.EventLog]::CreateEventSource("CustomDeployment", "Application")
+        }
+        Write-EventLog -LogName "Application" -Source "CustomDeployment" -EventId 1000 -EntryType Information -Message $logMessage
+    }
+    catch {
+        # Ignore event log errors
+    }
+}
+
 # Set error handling
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 try {
-    Write-Host "=== Starting ASP.NET Core Blazor Server Deployment ===" -ForegroundColor Green
-    Write-Host "Server: $env:COMPUTERNAME" -ForegroundColor Cyan
-
-    # Install IIS with ASP.NET Core features
-    Write-Host "Installing IIS and required features..." -ForegroundColor Yellow
+    # Create accessible log directory
+    $logDir = "C:\temp"
+    if (!(Test-Path $logDir)) {
+        New-Item -ItemType Directory -Path $logDir -Force
+    }
+    
+    # Clear previous log
+    if (Test-Path "C:\temp\deployment.log") {
+        Remove-Item "C:\temp\deployment.log" -Force
+    }
+    
+    Write-Log "=== Starting ASP.NET Core Blazor Server Deployment ===" "INFO" "Green"
+    Write-Log "Server: $env:COMPUTERNAME" "INFO" "Cyan"
+    Write-Log "Script Parameters: AppName=$AppName, AppZipUrl=$AppZipUrl" "INFO" "Cyan"
+    
+    # Test internet connectivity first
+    Write-Log "Testing internet connectivity..." "INFO" "Yellow"
+    try {
+        $testUrl = "https://www.microsoft.com"
+        $webRequest = [System.Net.WebRequest]::Create($testUrl)
+        $webRequest.Method = "HEAD"
+        $webRequest.Timeout = 10000
+        $response = $webRequest.GetResponse()
+        $response.Close()
+        Write-Log "Internet connectivity test PASSED" "SUCCESS" "Green"
+    }
+    catch {
+        Write-Log "Internet connectivity test FAILED: $($_.Exception.Message)" "ERROR" "Red"
+    }
+    
+    # Install IIS features
+    Write-Log "Installing IIS and required features..." "INFO" "Yellow"
     $features = @(
         "IIS-WebServerRole", "IIS-WebServer", "IIS-CommonHttpFeatures",
         "IIS-HttpErrors", "IIS-HttpLogging", "IIS-HttpRedirect", 
@@ -22,33 +78,61 @@ try {
         "IIS-ManagementConsole", "IIS-IIS6ManagementCompatibility", "IIS-Metabase"
     )
     
-    Enable-WindowsOptionalFeature -Online -FeatureName $features -All -NoRestart
-
-    # Create temp directory
-    $tempDir = "C:\temp"
-    if (!(Test-Path $tempDir)) {
-        New-Item -ItemType Directory -Path $tempDir -Force
+    try {
+        Enable-WindowsOptionalFeature -Online -FeatureName $features -All -NoRestart
+        Write-Log "IIS features installed successfully" "SUCCESS" "Green"
     }
-
-    # Download and Install .NET 9.0 Hosting Bundle
-    Write-Host "Downloading .NET 9.0 Hosting Bundle..." -ForegroundColor Yellow
-    $dotnetUrl = "https://download.visualstudio.microsoft.com/download/pr/72e8b5b6-9d9b-4199-9de2-b0a4c1f2c1a5/9e97b01255a14b2c8eca3d6f6b4e8b0f/dotnet-hosting-9.0.0-win.exe"
-    $dotnetInstaller = "$tempDir\dotnet-hosting-bundle.exe"
+    catch {
+        Write-Log "IIS features installation warning: $($_.Exception.Message)" "WARNING" "Yellow"
+    }
     
-    Invoke-WebRequest -Uri $dotnetUrl -OutFile $dotnetInstaller -UseBasicParsing
+    # Download .NET hosting bundle
+    Write-Log "Downloading .NET 9.0 Hosting Bundle..." "INFO" "Yellow"
     
-    Write-Host "Installing .NET 9.0 Hosting Bundle..." -ForegroundColor Yellow
-    Start-Process -FilePath $dotnetInstaller -ArgumentList "/quiet" -Wait
+    $dotnetUrls = @(
+        "https://download.visualstudio.microsoft.com/download/pr/72e8b5b6-9d9b-4199-9de2-b0a4c1f2c1a5/9e97b01255a14b2c8eca3d6f6b4e8b0f/dotnet-hosting-9.0.0-win.exe",
+        "https://dotnetcli.azureedge.net/dotnet/aspnetcore/Runtime/9.0.0/dotnet-hosting-9.0.0-win.exe"
+    )
+    
+    $dotnetInstaller = "$logDir\dotnet-hosting-bundle.exe"
+    $downloadSuccess = $false
+    
+    foreach ($url in $dotnetUrls) {
+        try {
+            Write-Log "Attempting download from: $url" "INFO" "Cyan"
+            Invoke-WebRequest -Uri $url -OutFile $dotnetInstaller -UseBasicParsing -TimeoutSec 300
+            if (Test-Path $dotnetInstaller) {
+                $fileSize = (Get-Item $dotnetInstaller).Length
+                Write-Log ".NET bundle downloaded successfully. Size: $fileSize bytes" "SUCCESS" "Green"
+                $downloadSuccess = $true
+                break
+            }
+        }
+        catch {
+            Write-Log "Download failed from $url : $($_.Exception.Message)" "ERROR" "Red"
+        }
+    }
+    
+    if ($downloadSuccess) {
+        try {
+            Write-Log "Installing .NET hosting bundle..." "INFO" "Yellow"
+            $installProcess = Start-Process -FilePath $dotnetInstaller -ArgumentList "/quiet" -Wait -PassThru
+            Write-Log ".NET installation completed with exit code: $($installProcess.ExitCode)" "INFO" "Cyan"
+        }
+        catch {
+            Write-Log ".NET installation failed: $($_.Exception.Message)" "ERROR" "Red"
+        }
+    }
     
     # Restart IIS to load new modules
-    Write-Host "Restarting IIS..." -ForegroundColor Yellow
+    Write-Log "Restarting IIS..." "INFO" "Yellow"
     Start-Sleep -Seconds 5
     iisreset /restart
     Start-Sleep -Seconds 10
 
     # Create application directory
     $appPath = "C:\inetpub\wwwroot\$AppName"
-    Write-Host "Creating application directory: $appPath" -ForegroundColor Yellow
+    Write-Log "Creating application directory: $appPath" "INFO" "Yellow"
     if (Test-Path $appPath) {
         Remove-Item $appPath -Recurse -Force
     }
@@ -56,26 +140,26 @@ try {
 
     # Download application from GitHub releases
     if ($AppZipUrl -ne "") {
-        Write-Host "Downloading Blazor application from: $AppZipUrl" -ForegroundColor Yellow
+        Write-Log "Downloading Blazor application from: $AppZipUrl" "INFO" "Yellow"
         
-        $appZip = "$tempDir\blazorapp.zip"
+        $appZip = "$logDir\blazorapp.zip"
         
         try {
             Invoke-WebRequest -Uri $AppZipUrl -OutFile $appZip -UseBasicParsing
-            Write-Host "Extracting application files..." -ForegroundColor Yellow
+            Write-Log "Extracting application files..." "INFO" "Yellow"
             Expand-Archive -Path $appZip -DestinationPath $appPath -Force
-            Write-Host "✅ Blazor application deployed successfully!" -ForegroundColor Green
+            Write-Log "✅ Blazor application deployed successfully!" "SUCCESS" "Green"
         }
         catch {
             Write-Warning "⚠️ Could not download application: $($_.Exception.Message)"
-            Write-Host "Creating placeholder application structure..." -ForegroundColor Yellow
+            Write-Log "Creating placeholder application structure..." "INFO" "Yellow"
             New-Item -ItemType Directory -Path "$appPath\wwwroot" -Force
         }
     }
 
     # Create or update appsettings.json with connection string
     if ($ConnectionString -ne "") {
-        Write-Host "Creating appsettings.json with SQL Server connection..." -ForegroundColor Yellow
+        Write-Log "Creating appsettings.json with SQL Server connection..." "INFO" "Yellow"
         $hostname = $env:COMPUTERNAME
         $appSettings = @{
             "Logging"           = @{
@@ -100,7 +184,7 @@ try {
 
     # Create web.config for ASP.NET Core
     if (Get-ChildItem -Path $appPath -Filter "*.dll" -ErrorAction SilentlyContinue) {
-        Write-Host "Creating web.config for ASP.NET Core..." -ForegroundColor Yellow
+        Write-Log "Creating web.config for ASP.NET Core..." "INFO" "Yellow"
         
         # Find the main application DLL
         $mainDll = Get-ChildItem -Path $appPath -Filter "*.dll" | Where-Object { $_.BaseName -like "*$AppName*" } | Select-Object -First 1
@@ -141,7 +225,7 @@ try {
     Import-Module WebAdministration -Force
 
     # Create Application Pool
-    Write-Host "Creating Application Pool for .NET Core..." -ForegroundColor Yellow
+    Write-Log "Creating Application Pool for .NET Core..." "INFO" "Yellow"
     $poolName = "${AppName}Pool"
     if (Get-IISAppPool -Name $poolName -ErrorAction SilentlyContinue) {
         Remove-IISAppPool -Name $poolName -Confirm:$false
@@ -152,7 +236,7 @@ try {
     Set-IISAppPool -Name $poolName -ManagedRuntimeVersion ""  # No Managed Code for .NET Core
 
     # Create IIS Application
-    Write-Host "Creating IIS Application..." -ForegroundColor Yellow
+    Write-Log "Creating IIS Application..." "INFO" "Yellow"
     $siteName = "Default Web Site"
     $appVirtualPath = "/$AppName"
     
@@ -163,9 +247,9 @@ try {
     New-IISApp -Name "$siteName$appVirtualPath" -PhysicalPath $appPath -ApplicationPool $poolName
 
     # Download and install WMI Exporter
-    Write-Host "Installing WMI Exporter for monitoring..." -ForegroundColor Yellow
+    Write-Log "Installing WMI Exporter for monitoring..." "INFO" "Yellow"
     $wmiExporterUrl = "https://github.com/prometheus-community/windows_exporter/releases/download/v0.24.0/windows_exporter-0.24.0-amd64.msi"
-    $wmiExporter = "$tempDir\windows_exporter.msi"
+    $wmiExporter = "$logDir\windows_exporter.msi"
     Invoke-WebRequest -Uri $wmiExporterUrl -OutFile $wmiExporter -UseBasicParsing
     Start-Process msiexec.exe -Wait -ArgumentList "/I $wmiExporter /quiet /norestart"
 
@@ -176,30 +260,29 @@ try {
 
     # Test SQL Server connectivity
     if ($ConnectionString -ne "") {
-        Write-Host "Testing SQL Server connectivity..." -ForegroundColor Yellow
+        Write-Log "Testing SQL Server connectivity..." "INFO" "Yellow"
         try {
             $connectionTest = New-Object System.Data.SqlClient.SqlConnection($ConnectionString)
             $connectionTest.Open()
             $connectionTest.Close()
-            Write-Host "✅ SQL Server connection successful!" -ForegroundColor Green
+            Write-Log "✅ SQL Server connection successful!" "SUCCESS" "Green"
         }
         catch {
             Write-Warning "⚠️ SQL Server connection failed: $($_.Exception.Message)"
-            Write-Host "This requires VPN connectivity to be established first." -ForegroundColor Yellow
+            Write-Log "This requires VPN connectivity to be established first." "INFO" "Yellow"
         }
     }
 
-    Write-Host "=== Deployment Summary ===" -ForegroundColor Green
-    Write-Host "Server: $env:COMPUTERNAME" -ForegroundColor White
-    Write-Host "Application Pool: $poolName" -ForegroundColor White
-    Write-Host "Application Path: $appPath" -ForegroundColor White
-    Write-Host "Blazor App URL: http://localhost/$AppName" -ForegroundColor Cyan
-    Write-Host "WMI Exporter: http://localhost:9182/metrics" -ForegroundColor Cyan
-    Write-Host "✅ ASP.NET Core Blazor Server deployment completed!" -ForegroundColor Green
-
+    # Final status
+    Write-Log "=== Deployment Summary ===" "INFO" "Green"
+    Write-Log "Check logs at: C:\temp\deployment.log" "INFO" "Cyan"
+    Write-Log "Check extension logs at: C:\Packages\Plugins\Microsoft.Compute.CustomScriptExtension\" "INFO" "Cyan"
+    Write-Log "Deployment completed" "SUCCESS" "Green"
+    
+    exit 0
 }
 catch {
-    Write-Error "❌ Deployment failed: $($_.Exception.Message)"
-    Write-Host $_.Exception.StackTrace -ForegroundColor Red
+    Write-Log "CRITICAL ERROR: $($_.Exception.Message)" "ERROR" "Red"
+    Write-Log "Stack trace: $($_.Exception.StackTrace)" "ERROR" "Red"
     exit 1
 }
