@@ -9,9 +9,17 @@ resource "azurerm_virtual_machine_extension" "iis01_setup" {
     "fileUris" = [
       "https://raw.githubusercontent.com/Zied-BenBahri/azure-iac-project/main/scripts/setup-iis.ps1"
     ],
-    "commandToExecute" = "powershell -ExecutionPolicy Unrestricted -File setup-iis.ps1"
-  })
+  "commandToExecute" = "powershell -ExecutionPolicy Unrestricted -File setup-iis.ps1 -AppName 'BlazorApp' -ConnectionString 'Server=tcp:172.16.0.130,1433;Database=BlazorCrudApp;User Id=blazoruser;Password=BlazorApp2024!;TrustServerCertificate=true;MultipleActiveResultSets=true;Connection Timeout=30;' -AppZipUrl 'https://raw.githubusercontent.com/Zied-BenBahri/azure-iac-project/main/releases/blazorapp.zip'" })
+
+  timeouts {
+    create = "25m"
+    update = "25m"
+    delete = "10m"
+  }
+
+  depends_on = [azurerm_windows_virtual_machine.vm_iis_01]
 }
+
 resource "azurerm_virtual_machine_extension" "iis02_setup" {
   name                 = "iis-setup"
   virtual_machine_id   = azurerm_windows_virtual_machine.vm_iis_02.id
@@ -23,9 +31,17 @@ resource "azurerm_virtual_machine_extension" "iis02_setup" {
     "fileUris" = [
       "https://raw.githubusercontent.com/Zied-BenBahri/azure-iac-project/main/scripts/setup-iis.ps1"
     ],
-    "commandToExecute" = "powershell -ExecutionPolicy Unrestricted -File setup-iis.ps1"
-  })
+  "commandToExecute" = "powershell -ExecutionPolicy Unrestricted -File setup-iis.ps1 -AppName 'BlazorApp' -ConnectionString 'Server=tcp:172.16.0.130,1433;Database=BlazorCrudApp;User Id=blazoruser;Password=BlazorApp2024!;TrustServerCertificate=true;MultipleActiveResultSets=true;Connection Timeout=30;' -AppZipUrl 'https://raw.githubusercontent.com/Zied-BenBahri/azure-iac-project/main/releases/blazorapp.zip'" })
+
+  timeouts {
+    create = "25m"
+    update = "25m"
+    delete = "10m"
+  }
+
+  depends_on = [azurerm_windows_virtual_machine.vm_iis_02]
 }
+
 resource "azurerm_virtual_machine_extension" "monitor_script" {
   name                 = "setup-monitoring"
   virtual_machine_id   = azurerm_linux_virtual_machine.monitor_vm.id
@@ -37,4 +53,12 @@ resource "azurerm_virtual_machine_extension" "monitor_script" {
     fileUris         = ["https://raw.githubusercontent.com/Zied-BenBahri/azure-iac-project/main/scripts/setup-monitoring.sh"]
     commandToExecute = "bash setup-monitoring.sh"
   })
+
+  timeouts {
+    create = "15m"
+    update = "15m"
+    delete = "10m"
+  }
+
+  depends_on = [azurerm_linux_virtual_machine.monitor_vm]
 }
