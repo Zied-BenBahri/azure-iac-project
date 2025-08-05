@@ -34,7 +34,7 @@ function Write-Log {
     Add-Content -Path "C:\deployment.log" -Value $logMessage -Force
 }
 
-Write-Log "=== Starting Optimized Blazor Application Deployment ==="
+Write-Log "Starting Optimized Blazor Application Deployment"
 
 # Track deployment start time
 $deploymentStart = Get-Date
@@ -230,7 +230,7 @@ try {
     Start-WebAppPool -Name $appPoolName
     Start-Website -Name $SiteName
 
-    Write-Log "=== Deployment completed successfully! ==="
+    Write-Log "Deployment completed successfully!"
     Write-Log "Application is available at: http://localhost"
     Write-Log "Total deployment time: $((Get-Date) - $deploymentStart)"
     
@@ -240,10 +240,10 @@ try {
     
     try {
         $response = Invoke-WebRequest -Uri "http://localhost" -UseBasicParsing -TimeoutSec 15
-        Write-Log "✓ Application is responding (Status: $($response.StatusCode))"
+        Write-Log "Application is responding (Status: $($response.StatusCode))"
     }
     catch {
-        Write-Log "⚠ Application test failed - $($_.Exception.Message)"
+        Write-Log "Application test failed - $($_.Exception.Message)"
         Write-Log "This might be normal if the application needs more time to start"
     }
 
@@ -253,11 +253,11 @@ try {
 
 }
 catch {
-    Write-Log "❌ ERROR during deployment: $($_.Exception.Message)"
+    Write-Log "ERROR during deployment: $($_.Exception.Message)"
     Write-Log "Stack trace: $($_.Exception.StackTrace)"
     
     # Try to get more details about what failed
-    Write-Log "=== Troubleshooting Information ==="
+    Write-Log "Troubleshooting Information"
     Write-Log "Current PowerShell version: $($PSVersionTable.PSVersion)"
     Write-Log "Current user: $env:USERNAME"
     Write-Log "Available disk space: $((Get-WmiObject -Class Win32_LogicalDisk -Filter 'DriveType=3' | Select-Object -First 1).FreeSpace / 1GB) GB"
@@ -267,5 +267,5 @@ catch {
 finally {
     # Cleanup any remaining jobs
     Get-Job | Remove-Job -Force -ErrorAction SilentlyContinue
-    Write-Log "=== Script execution completed ==="
+    Write-Log "Script execution completed"
 }
