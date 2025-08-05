@@ -8,6 +8,7 @@ param(
     [string]$SiteName = "BlazorApp1",
     
     [Parameter(Mandatory = $false)]
+    [string]$DatabaseServer = "172.16.0.130",
     
     [Parameter(Mandatory = $false)]
     [string]$DatabaseName = "BlazorCrudApp",
@@ -34,6 +35,9 @@ function Write-Log {
 }
 
 Write-Log "=== Starting Optimized Blazor Application Deployment ==="
+
+# Track deployment start time
+$deploymentStart = Get-Date
 
 try {
     # Create temp directory first
@@ -256,7 +260,7 @@ catch {
     Write-Log "=== Troubleshooting Information ==="
     Write-Log "Current PowerShell version: $($PSVersionTable.PSVersion)"
     Write-Log "Current user: $env:USERNAME"
-    Write-Log "Available disk space: $((Get-WmiObject -Class Win32_LogicalDisk -Filter "DriveType=3" | Select-Object -First 1).FreeSpace / 1GB) GB"
+    Write-Log "Available disk space: $((Get-WmiObject -Class Win32_LogicalDisk -Filter 'DriveType=3' | Select-Object -First 1).FreeSpace / 1GB) GB"
     
     throw
 }
