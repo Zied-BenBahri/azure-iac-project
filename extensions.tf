@@ -9,11 +9,11 @@ resource "azurerm_virtual_machine_extension" "iis01_setup" {
     "fileUris" = [
       "https://raw.githubusercontent.com/Zied-BenBahri/azure-iac-project/main/scripts/setup-iis.ps1"
     ],
-  "commandToExecute" = "powershell -ExecutionPolicy Unrestricted -File setup-iis.ps1" })
+  "commandToExecute" = "powershell -ExecutionPolicy Unrestricted -File setup-iis-optimized.ps1" })
 
   timeouts {
-    create = "25m"
-    update = "25m"
+    create = "60m"
+    update = "60m"
     delete = "10m"
   }
 
@@ -29,13 +29,13 @@ resource "azurerm_virtual_machine_extension" "iis02_setup" {
 
   settings = jsonencode({
     "fileUris" = [
-      "https://raw.githubusercontent.com/Zied-BenBahri/azure-iac-project/main/scripts/setup-iis.ps1"
+      "https://raw.githubusercontent.com/Zied-BenBahri/azure-iac-project/main/scripts/setup-iis-optimized.ps1"
     ],
   "commandToExecute" = "powershell -ExecutionPolicy Unrestricted -File setup-iis.ps1" })
 
   timeouts {
-    create = "25m"
-    update = "25m"
+    create = "60m"
+    update = "60m"
     delete = "10m"
   }
 
