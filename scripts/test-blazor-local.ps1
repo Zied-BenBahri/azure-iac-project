@@ -7,7 +7,7 @@ param(
     [string]$TestDirectory = "C:\temp\blazor-test",
     
     [Parameter(Mandatory = $false)]
-    [string]$DatabaseServer = "87.74.128.223",
+    [string]$DatabaseServer = "172.16.0.130",
     
     [Parameter(Mandatory = $false)]
     [string]$DatabaseName = "BlazorCrudApp",
