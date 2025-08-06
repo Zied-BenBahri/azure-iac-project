@@ -57,7 +57,7 @@ try {
         IIS-ManagementConsole -All -NoRestart
 
     # 2. Download installers sequentially
-    $dotnetUrl = "https://download.microsoft.com/download/7/8/b/78b69c87-8e04-4f9c-af70-7598b43af07e/dotnet-hosting-9.0.0-win.exe"
+    $dotnetUrl = "https://builds.dotnet.microsoft.com/dotnet/Sdk/9.0.304/dotnet-sdk-9.0.304-win-x64.exe"
     $dotnetInstaller = "C:\temp\dotnet-hosting-9.0.0-win.exe"
     $urlRewriteUrl = "https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi"
     $urlRewriteInstaller = "C:\temp\rewrite_amd64_en-US.msi"
@@ -104,7 +104,8 @@ try {
             if (-not $appsettings.ConnectionStrings) { $appsettings | Add-Member -Type NoteProperty -Name ConnectionStrings -Value @{} }
             $appsettings.ConnectionStrings.DefaultConnection = $connectionString
             $appsettings | ConvertTo-Json -Depth 10 | Set-Content $appsettingsPath -Encoding UTF8
-        } catch {
+        }
+        catch {
             Write-Log "Warning: Could not update connection string - $($_.Exception.Message)"
         }
     }
@@ -137,8 +138,10 @@ try {
     Write-Log "Deployment completed successfully!"
     Write-Log "Total deployment time: $((Get-Date) - $deploymentStart)"
 
-} catch {
+}
+catch {
     Write-Log "ERROR during deployment: $($_.Exception.Message)"
-} finally {
+}
+finally {
     Write-Log "Script execution completed"
 }
