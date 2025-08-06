@@ -66,7 +66,7 @@ resource "azurerm_windows_virtual_machine" "vm_iis_01" {
   name                  = "vm-iis-01"
   location              = var.location
   resource_group_name   = azurerm_resource_group.main.name
-  size                  = "Standard_B1s"
+  size                  = "Standard_B2ms"
   admin_username        = var.admin_username
   admin_password        = var.admin_password
   network_interface_ids = [azurerm_network_interface.iis01_nic.id]
@@ -89,7 +89,7 @@ resource "azurerm_windows_virtual_machine" "vm_iis_02" {
   name                  = "vm-iis-02"
   location              = var.location
   resource_group_name   = azurerm_resource_group.main.name
-  size                  = "Standard_B1s"
+  size                  = "Standard_B2ms"
   admin_username        = var.admin_username
   admin_password        = var.admin_password
   network_interface_ids = [azurerm_network_interface.iis02_nic.id]
