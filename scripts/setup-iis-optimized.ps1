@@ -1,4 +1,5 @@
 # Azure VM Custom Script Extension for Blazor App Deployment - FIXED
+# powershell -ExecutionPolicy Unrestricted -File 
 
 param(
     [Parameter(Mandatory = $false)]
@@ -41,26 +42,26 @@ function Test-WebConfig {
     try {
         if (Test-Path $ConfigPath) {
             [xml]$webConfig = Get-Content $ConfigPath
-            Write-Log "✅ web.config is valid XML"
+            Write-Log "[OK] web.config is valid XML"
             
             # Check for ASP.NET Core module
             $aspNetCoreModule = $webConfig.configuration.system.webServer.modules.add | Where-Object { $_.name -eq "AspNetCoreModuleV2" }
             if ($aspNetCoreModule) {
-                Write-Log "✅ ASP.NET Core Module found in web.config"
+                Write-Log "[OK] ASP.NET Core Module found in web.config"
                 return $true
             }
             else {
-                Write-Log "❌ ASP.NET Core Module missing in web.config"
+                Write-Log "[ERROR] ASP.NET Core Module missing in web.config"
                 return $false
             }
         }
         else {
-            Write-Log "❌ web.config not found at: $ConfigPath"
+            Write-Log "[ERROR] web.config not found at: $ConfigPath"
             return $false
         }
     }
     catch {
-        Write-Log "❌ web.config validation failed: $($_.Exception.Message)"
+        Write-Log "[ERROR] web.config validation failed: $($_.Exception.Message)"
         return $false
     }
 }
@@ -92,7 +93,7 @@ function New-BlazorWebConfig {
 "@
 
     Set-Content -Path $ConfigPath -Value $webConfigContent -Encoding UTF8
-    Write-Log "✅ Created proper web.config for Blazor application"
+    Write-Log "[OK] Created proper web.config for Blazor application"
 }
 
 Write-Log "Starting FIXED Azure Blazor Application Deployment"
@@ -103,6 +104,10 @@ try {
     if (!(Test-Path "C:\temp")) {
         New-Item -ItemType Directory -Path "C:\temp" -Force
     }
+    # Download and install WMI Exporter 
+    Write-Host "Installing WMI Exporter..."
+    Invoke-WebRequest -Uri "https://github.com/prometheus-community/windows_exporter/releases/download/v0.24.0/windows_exporter-0.24.0-amd64.msi" -OutFile "C:\windows_exporter.msi"
+    Start-Process msiexec.exe -Wait -ArgumentList '/I C:\windows_exporter.msi /quiet'
 
     # 1. Install IIS and required features
     Write-Log "Installing essential IIS features..."
@@ -124,7 +129,7 @@ try {
     # 2. Download CORRECT installers - FIXED URLs
     Write-Log "=== DOWNLOADING CORRECT ASP.NET CORE HOSTING BUNDLE ==="
     
-    # FIXED: Use ASP.NET Core Hosting Bundle instead of SDK
+    # FIXED: Use correct ASP.NET Core Hosting Bundle URL and filename
     $dotnetHostingUrl = "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/9.0.8/dotnet-hosting-9.0.8-win.exe"
     $dotnetInstaller = "C:\temp\dotnet-hosting-8.0.8-win.exe"
     
@@ -134,12 +139,12 @@ try {
 
     # Download with error handling
     try {
-        Write-Log "Downloading ASP.NET Core 8 Hosting Bundle (REQUIRED FOR IIS)..."
+        Write-Log "Downloading ASP.NET Core 8.0.8 Hosting Bundle (REQUIRED FOR IIS)..."
         Invoke-WebRequest -Uri $dotnetHostingUrl -OutFile $dotnetInstaller -UseBasicParsing -TimeoutSec 300
-        Write-Log "✅ ASP.NET Core Hosting Bundle downloaded: $((Get-Item $dotnetInstaller).Length / 1MB) MB"
+        Write-Log "[OK] ASP.NET Core Hosting Bundle downloaded: $((Get-Item $dotnetInstaller).Length / 1MB) MB"
     }
     catch {
-        Write-Log "❌ Failed to download ASP.NET Core Hosting Bundle: $($_.Exception.Message)"
+        Write-Log "[ERROR] Failed to download ASP.NET Core Hosting Bundle: $($_.Exception.Message)"
         throw
     }
 
@@ -151,17 +156,17 @@ try {
 
     # 3. Install ASP.NET Core Hosting Bundle (CRITICAL FOR IIS)
     if (Test-Path $dotnetInstaller) {
-        Write-Log "Installing ASP.NET Core 8 Hosting Bundle for IIS..."
+        Write-Log "Installing ASP.NET Core 8.0.8 Hosting Bundle for IIS..."
         $installResult = Start-Process -FilePath $dotnetInstaller -ArgumentList "/quiet", "/norestart" -Wait -NoNewWindow -PassThru
         
         if ($installResult.ExitCode -eq 0) {
-            Write-Log "✅ ASP.NET Core Hosting Bundle installed successfully"
+            Write-Log "[OK] ASP.NET Core Hosting Bundle installed successfully"
         }
         elseif ($installResult.ExitCode -eq 1638) {
-            Write-Log "⚠️ ASP.NET Core Hosting Bundle already installed (Exit Code 1638)"
+            Write-Log "[WARNING] ASP.NET Core Hosting Bundle already installed (Exit Code 1638)"
         }
         else {
-            Write-Log "❌ ASP.NET Core installation failed with exit code: $($installResult.ExitCode)"
+            Write-Log "[ERROR] ASP.NET Core installation failed with exit code: $($installResult.ExitCode)"
             throw "ASP.NET Core installation failed"
         }
     }
@@ -235,10 +240,10 @@ try {
             if (-not $appsettings.ConnectionStrings) { $appsettings | Add-Member -Type NoteProperty -Name ConnectionStrings -Value @{} }
             $appsettings.ConnectionStrings.DefaultConnection = $connectionString
             $appsettings | ConvertTo-Json -Depth 10 | Set-Content $appsettingsPath -Encoding UTF8
-            Write-Log "✅ Connection string updated"
+            Write-Log "[OK] Connection string updated"
         }
         catch {
-            Write-Log "Warning: Could not update connection string - $($_.Exception.Message)"
+            Write-Log "[WARNING] Could not update connection string - $($_.Exception.Message)"
         }
     }
 
@@ -292,31 +297,31 @@ try {
     $appPoolState = Get-WebAppPoolState -Name $appPoolName
     $websiteState = Get-WebsiteState -Name $SiteName
     
-    Write-Log "✅ App Pool State: $($appPoolState.Value)"
-    Write-Log "✅ Website State: $($websiteState.Value)"
+    Write-Log "[OK] App Pool State: $($appPoolState.Value)"
+    Write-Log "[OK] Website State: $($websiteState.Value)"
 
-    Write-Log "🎉 Deployment completed successfully!"
-    Write-Log "🕒 Total deployment time: $((Get-Date) - $deploymentStart)"
-    Write-Log "🌐 Application should be accessible at: http://localhost"
-    Write-Log "📋 Check logs at: $logsPath"
+    Write-Log "[SUCCESS] Deployment completed successfully!"
+    Write-Log "[INFO] Total deployment time: $((Get-Date) - $deploymentStart)"
+    Write-Log "[INFO] Application should be accessible at: http://localhost"
+    Write-Log "[INFO] Check logs at: $logsPath"
 
 }
 catch {
-    Write-Log "❌ ERROR during deployment: $($_.Exception.Message)"
-    Write-Log "❌ Stack Trace: $($_.ScriptStackTrace)"
+    Write-Log "[ERROR] ERROR during deployment: $($_.Exception.Message)"
+    Write-Log "[ERROR] Stack Trace: $($_.ScriptStackTrace)"
     
     # Additional troubleshooting info
     Write-Log "=== TROUBLESHOOTING INFORMATION ==="
     if (Test-Path "C:\inetpub\wwwroot\$SiteName\web.config") {
-        Write-Log "📄 web.config exists"
+        Write-Log "[INFO] web.config exists"
         Get-Content "C:\inetpub\wwwroot\$SiteName\web.config" | ForEach-Object { Write-Log "   $_" }
     }
     else {
-        Write-Log "❌ web.config missing"
+        Write-Log "[ERROR] web.config missing"
     }
     
     exit 1
 }
 finally {
-    Write-Log "🏁 Script execution completed"
+    Write-Log "[INFO] Script execution completed"
 }
