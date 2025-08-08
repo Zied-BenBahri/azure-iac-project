@@ -61,10 +61,10 @@ resource "azurerm_network_interface" "iis02_nic" {
 }
 
 # Data source to reference the existing custom image
-data "azurerm_image" "vm_iis_image" {
-  name                = "vm-iis-blazor-image"
-  resource_group_name = azurerm_resource_group.main.name
-}
+# data "azurerm_image" "vm_iis_image" {
+#  name                = "vm-iis-blazor-image"
+#  resource_group_name = azurerm_resource_group.main.name
+# }
 
 # VM: vm-iis-01 (Recreated from custom image)
 resource "azurerm_windows_virtual_machine" "vm_iis_01" {
