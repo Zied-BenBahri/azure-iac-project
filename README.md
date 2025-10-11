@@ -5,7 +5,7 @@ This project provisions a robust Azure infrastructure using Terraform for a Blaz
 ## Project Structure
 
 - **main.tf**: Core resources (resource group, virtual network, subnets)
-- **nsg.tf**: Network Security Groups and their rules
+- **nsg.tf**: Network Security Groups and their rules.
 - **nsg-association.tf**: Associates NSGs with subnets and backend address pools with NICs
 - **lb.tf**: Load balancer configuration (frontend, backend pool, probes, and rules)
 - **public-ip.tf**: Public IP resources for the load balancer and monitoring VM
