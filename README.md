@@ -73,7 +73,7 @@ This infrastructure follows a **two-tier deployment approach**:
 
 ## Architecture Diagram
 
-![Azure Infrastructure Architecture](docs/internship-rg.png)
+![Azure Infrastructure Architecture](docs/internship-rg.jng)
 
 ## Deployment Workflow
 
